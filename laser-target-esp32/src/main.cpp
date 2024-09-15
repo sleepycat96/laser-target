@@ -1,12 +1,12 @@
 #include "Arduino.h"
 #include "PCF8575.h"
-#include " SerialMP3Player.h"
+#include "YX5300_ESP32.h"
 
-#define TX 11
-#define RX 10
+#define RX 3
+#define TX 1
 #define SHOTSOUND 11
 
-SerialMP3Player mp3(RX,TX);
+YX5300_ESP32 mp3;
 
 // Instantiate Wire for generic use at 400kHz
 TwoWire I2Cone = TwoWire(0);
@@ -26,6 +26,8 @@ void setup()
 {
 	Serial.begin(115200);
 
+	mp3 = YX5300_ESP32(Serial2, RX, TX);
+
 	pcf8575.pinMode(P0, INPUT);
 	pcf8575.pinMode(P1, INPUT);
 	pcf8575.pinMode(P2, INPUT);
@@ -38,10 +40,8 @@ void setup()
  	pcf8575.pinMode(P9, INPUT);
 
 	pcf8575.begin();
+	mp3.setVolume(30);
 
-	Serial.println("START");
-
-	timeElapsed = millis();
 }
 
 bool keyChanged = false;
@@ -67,8 +67,8 @@ void loop()
 
 void baodiem(int d)
 {
-	mp3.play(SHOTSOUND);
-	mp3.play(d);
+	mp3.playTrack(SHOTSOUND);
+	mp3.playTrack(d);
 }
 void keyChangedOnPCF8575(){
 	// Interrupt called (No Serial no read no wire in this function, and DEBUG disabled on PCF library)
