@@ -2,8 +2,14 @@
 #include "PCF8575.h"
 #include "YX5300_ESP32.h"
 
-#define RX 3
-#define TX 1
+#define RX 16
+#define TX 17
+
+#define SDA 32
+#define SCL 33
+
+
+
 #define SHOTSOUND 11
 
 YX5300_ESP32 mp3;
@@ -18,7 +24,7 @@ TwoWire I2Cone = TwoWire(0);
 void keyChangedOnPCF8575();
 
 // Set i2c address
-PCF8575 pcf8575(&I2Cone,0x20, 21, 22, ESP_INTERRUPTED_PIN, keyChangedOnPCF8575);
+PCF8575 pcf8575(&I2Cone,0x20, SDA, SCL, ESP_INTERRUPTED_PIN, keyChangedOnPCF8575);
 unsigned long timeElapsed;
 
 int diem = 0;
