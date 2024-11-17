@@ -1,82 +1,109 @@
-#include "Arduino.h"
+#include <Arduino.h>
+
+//#include "SerialMP3Player.h"
 #include "PCF8575.h"
-#include "YX5300_ESP32.h"
+#include <PxMatrix.h> // For P10 LED matrix
+#include <Wire.h>
 
-#define RX 16
-#define TX 17
+#define TX 5
+#define RX 6
+// Define PCF8575 I2C address
+//#define PCF8575_ADDRESS 0x20
 
-#define SDA 32
-#define SCL 33
+#define IRQPIN 2
+// Define pins for P10 LED matrix display
+#define P_LAT 8
+#define P_A 9
+#define P_B 10
+#define P_C 11
+#define P_D 12
+#define P_OE 13
 
-
-
-#define SHOTSOUND 11
-
-YX5300_ESP32 mp3;
-
-// Instantiate Wire for generic use at 400kHz
-TwoWire I2Cone = TwoWire(0);
-
-// For arduino uno only pin 1 and 2 are interrupted
-#define ESP_INTERRUPTED_PIN 2
-
-// Function interrupt
-void keyChangedOnPCF8575();
-
-// Set i2c address
-PCF8575 pcf8575(&I2Cone,0x20, SDA, SCL, ESP_INTERRUPTED_PIN, keyChangedOnPCF8575);
-unsigned long timeElapsed;
-
-int diem = 0;
-void setup()
-{
-	Serial.begin(115200);
-
-	mp3 = YX5300_ESP32(Serial2, RX, TX);
-
-	pcf8575.pinMode(P0, INPUT);
-	pcf8575.pinMode(P1, INPUT);
-	pcf8575.pinMode(P2, INPUT);
-	pcf8575.pinMode(P3, INPUT);
- 	pcf8575.pinMode(P4, INPUT);
- 	pcf8575.pinMode(P5, INPUT);
-	pcf8575.pinMode(P6, INPUT);
-	pcf8575.pinMode(P7, INPUT);
-	pcf8575.pinMode(P8, INPUT);
- 	pcf8575.pinMode(P9, INPUT);
-
-	pcf8575.begin();
-	mp3.setVolume(30);
-
-}
+// Create instances for PCF8575 and LED matrix display
+PCF8575 PCF(0x20);
+PxMATRIX display(32, 16, P_LAT, P_OE, P_A, P_B, P_C, P_D);
+//SerialMP3Player mp3(RX,TX);
 
 bool keyChanged = false;
-void loop()
+uint16_t points = 0;
+
+void pcf_irq()
 {
-	if (keyChanged){
-		PCF8575::DigitalInput di = pcf8575.digitalReadAll();
-    	if (di.p0 == 1) diem = 1;
-    	if (di.p1 == 1) diem = 2;
-   		if (di.p2 == 1) diem = 3;
-    	if (di.p3 == 1) diem = 4;
-    	if (di.p4 == 1) diem = 5;
-    	if (di.p5 == 1) diem = 6;
-    	if (di.p6 == 1) diem = 7;
-    	if (di.p7 == 1) diem = 8;
-    	if (di.p8 == 1) diem = 9;
-    	if (di.p9 == 1) diem = 10;
-		keyChanged= false;
-	}
-	if (diem != 0) baodiem(diem);
-	
+  keyChanged = true;
 }
 
-void baodiem(int d)
-{
-	mp3.playTrack(SHOTSOUND);
-	mp3.playTrack(d);
+void setup() {
+  // Start Serial for debugging
+  Serial.begin(9600);
+
+  // Initialize PCF8575
+  Wire.begin();
+  // Set PCF8575 pins as input with pull-up resistors
+  PCF.begin();
+  pinMode(IRQPIN, INPUT_PULLUP);
+  attachInterrupt(digitalPinToInterrupt(IRQPIN), pcf_irq, FALLING);
+
+  // Initialize LED matrix display
+  display.begin(8);           // Lower refresh rate for Arduino Uno
+  display.setFastUpdate(true); // Faster refresh
+  display.clearDisplay();
 }
-void keyChangedOnPCF8575(){
-	// Interrupt called (No Serial no read no wire in this function, and DEBUG disabled on PCF library)
-	 keyChanged = true;
+
+void loop()
+{
+  // Reset total points
+  display.clearDisplay();
+  display.setCursor(0, 0);
+  display.print(0);
+  // Read inputs and calculate the score
+  if (keyChanged)
+  {
+    switch (PCF.read16())
+    {
+      case 0:
+        points = 0;
+        break;
+      case 1:
+        points = 1;
+        break;
+      case 2:
+        points = 2;
+        break;
+      case 4:
+        points = 3;
+        break;
+      case 8:
+        points = 4;
+        break;
+      case 16:
+        points = 5;
+        break;
+      case 32:
+        points = 6;
+        break;
+      case 64:
+        points = 7;
+        break;
+      case 128:
+        points = 8;
+        break;
+      case 256:
+        points = 9;
+      case 512:
+        points = 10;
+        break;
+    }
+     
+  // Clear display and show the score
+    display.clearDisplay();
+    display.setCursor(0, 0);
+    display.print(points);
+
+    // Debugging: Output the score to Serial
+    Serial.print("Total Points: ");
+    Serial.println(points);
+
+    delay(2000); 
+    keyChanged = false;
+  }
 }
